@@ -1,0 +1,21 @@
+# .NET Core
+bin/
+obj/
+*.user
+*.userosscache
+*.sln.docstates
+appsettings.Development.json
+
+# Next.js
+frontend/.next/
+frontend/node_modules/
+frontend/.env.local
+frontend/.env
+.env
+
+# Docker
+.dockerignore
+
+# OS files
+.DS_Store
+Thumbs.db
