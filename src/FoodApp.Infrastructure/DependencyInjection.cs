@@ -23,7 +23,8 @@ public static class DependencyInjection
         services.AddScoped<IFoodItemRepository, FoodItemRepository>();
         services.AddScoped<IJwtProvider, JwtProvider>();
         services.AddScoped<IPasswordHasher, PasswordHasher>();
-        services.AddScoped<IEmailService, FoodApp.Infrastructure.Services.EmailService>();
+        services.AddHttpClient();
+        services.AddScoped<IEmailService, FoodApp.Infrastructure.Services.ResendEmailService>();
         services.AddHttpClient<IRecipeService, FoodApp.Infrastructure.Services.GroqRecipeService>();
 
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

@@ -27,6 +27,7 @@ services:
       - SmtpSettings__SenderEmail=${SMTP_EMAIL}
       - SmtpSettings__Username=${SMTP_EMAIL}
       - SmtpSettings__Password=${SMTP_PASSWORD}
+      - ResendSettings__ApiKey=${RESEND_API_KEY}
     ports:
       - "5050:5050"
     depends_on:

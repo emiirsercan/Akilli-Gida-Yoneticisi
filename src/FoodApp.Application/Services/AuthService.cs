@@ -34,24 +34,11 @@ public class AuthService : IAuthService
             PasswordHash = passwordHash,
             FirstName = request.FirstName,
             LastName = request.LastName,
-            VerificationToken = verificationToken,
-            IsEmailVerified = false
+            IsEmailVerified = true
         };
 
         await _userRepository.AddAsync(user);
 
-        // Gerçek E-Posta Gönderimi
-        var subject = "FoodApp - Lütfen E-postanızı Doğrulayın";
-        var body = $@"
-            <h2>FoodApp'e Hoşgeldiniz!</h2>
-            <p>Hesabınızı doğrulamak için aşağıdaki kodu kullanın:</p>
-            <h3 style='background:#f4f4f4; padding:10px;'>{verificationToken}</h3>
-            <p>Eğer bu işlemi siz yapmadıysanız bu mesajı görmezden gelebilirsiniz.</p>
-        ";
-        
-        await _emailService.SendEmailAsync(user.Email, subject, body);
-
-        // API Cevabında artık token dönmüyoruz (güvenlik)
         return new AuthResponse("", user.Email, user.FirstName, user.LastName);
     }
 
@@ -60,9 +47,6 @@ public class AuthService : IAuthService
         var user = await _userRepository.GetByEmailAsync(request.Email);
         if (user is null || !_passwordHasher.Verify(request.Password, user.PasswordHash))
             throw new Exception("Invalid email or password.");
-
-        if (!user.IsEmailVerified)
-            throw new Exception("Please verify your email address before logging in.");
 
         var token = _jwtProvider.GenerateToken(user);
         return new AuthResponse(token, user.Email, user.FirstName, user.LastName);

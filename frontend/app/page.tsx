@@ -148,9 +148,6 @@ export default function AuthPage() {
                   </span>
                 ) : 'Giriş Yap →'}
               </button>
-              <button type="button" onClick={() => router.push('/verify-email')} className="btn-ghost">
-                📬 E-postamı doğrula
-              </button>
             </form>
           )}
 
