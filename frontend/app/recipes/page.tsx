@@ -139,7 +139,7 @@ export default function RecipesPage() {
                 <span className="gradient-text">AI</span> Tarif Önerileri
               </h1>
               <p style={{ color: '#64748b', fontSize: '14px', marginTop: '3px' }}>
-                Elindeki malzemeleri gir, Gemini AI senin için tarif üretsin
+                Elindeki malzemeleri gir, Yapay Zeka senin için tarif üretsin
               </p>
             </div>
           </div>
@@ -190,7 +190,7 @@ export default function RecipesPage() {
             {loading ? (
               <>
                 <span className="animate-spin" style={{ width: '20px', height: '20px', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%', display: 'inline-block' }} />
-                Gemini AI tarif hazırlıyor...
+                Yapay Zeka tarif hazırlıyor...
               </>
             ) : (
               <>✨ {ingredients.length} malzemeyle tarif öner</>

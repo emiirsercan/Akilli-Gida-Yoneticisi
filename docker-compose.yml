@@ -23,6 +23,10 @@ services:
       - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=FoodAppDb;Username=postgres;Password=postgres
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_HTTP_PORTS=5050
+      - GroqSettings__ApiKey=${GROQ_API_KEY}
+      - SmtpSettings__SenderEmail=${SMTP_EMAIL}
+      - SmtpSettings__Username=${SMTP_EMAIL}
+      - SmtpSettings__Password=${SMTP_PASSWORD}
     ports:
       - "5050:5050"
     depends_on:
