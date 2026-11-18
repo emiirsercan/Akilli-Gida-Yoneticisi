@@ -1,20 +1,10 @@
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-import "./globals.css";
-
-const inter = Inter({ subsets: ["latin"] });
-
+import type { Metadata, Viewport } from 'next';
+import './globals.css';
 export const metadata: Metadata = {
-  title: "FoodApp — Akıllı Buzdolabın",
-  description: "Gıda israfını önle, tarifleri keşfet, buzdolabını akıllıca yönet.",
+  title: 'FoodApp — Az israf, bol lezzet.',
+  description: 'Dolabındakileri keşfet, tazeliği takip et ve elindeki malzemelerle güzel yemekler pişir.',
 };
-
-export default function RootLayout({
-  children,
-}: Readonly<{ children: React.ReactNode }>) {
-  return (
-    <html lang="tr">
-      <body className={inter.className}>{children}</body>
-    </html>
-  );
+export const viewport: Viewport = { width: 'device-width', initialScale: 1, viewportFit: 'cover', themeColor: '#f7f7f0' };
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  return <html lang="tr"><body>{children}</body></html>;
 }
