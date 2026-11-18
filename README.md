@@ -22,7 +22,7 @@ Proje, **Clean Architecture (Temiz Mimari)** prensipleriyle geliştirilmiş sağ
 
 ### ✨ Temel Özellikler
 
-- **🔐 Güvenli Kimlik Doğrulama:** JWT (JSON Web Token) altyapısı ile güvenli kayıt olma, giriş yapma ve e-posta doğrulama akışları.
+- **🔐 Güvenli Kimlik Doğrulama:** E-posta ve şifreyle kayıt, JWT ile oturum açma.
 - **📦 Gelişmiş Envanter Yönetimi:** Kullanıcıya özel gıda dolabı. Ürün ekleme, miktar/tarih düzenleme ve silme işlemleri (Tam CRUD yeteneği).
 - **🚦 Akıllı SKT (Son Kullanma Tarihi) Takibi:** Ürünlerin bozulmasına kalan gün sayısına göre otomatik renk kodlaması (Taze, Dikkat, Kritik, Süresi Doldu) ve görsel ilerleme çubukları.
 - **🤖 Yapay Zeka Destekli Tarif Motoru:** **Groq AI (Llama 3.3)** entegrasyonu. Sistem, son kullanma tarihi 7 günden az kalan ürünleri otomatik algılar ve bu ürünleri kullanarak israfı önleyecek detaylı (adım adım, malzeme ölçülü ve zorluk seviyeli) yemek tarifleri üretir.
@@ -45,7 +45,7 @@ Proje, **Clean Architecture (Temiz Mimari)** prensipleriyle geliştirilmiş sağ
 - TypeScript
 
 **Yapay Zeka & DevOps:**
-- Groq API (LLaMA-3.3-70b-versatile Modeli - Doğal Dil İşleme)
+- Groq API (GPT-OSS 120B Modeli - Doğal Dil İşleme)
 - Docker & Docker Compose
 
 ## 🚀 Kurulum ve Çalıştırma

@@ -1,6 +1,7 @@
 using FoodApp.Application.Interfaces;
 using FoodApp.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace FoodApp.Infrastructure.Persistence.Repositories;
 
@@ -18,20 +19,20 @@ public class UserRepository : IUserRepository
         return await _context.Users.SingleOrDefaultAsync(u => u.Email == email);
     }
 
-    public async Task AddAsync(User user)
+    public async Task<bool> TryAddAsync(User user)
     {
         await _context.Users.AddAsync(user);
-        await _context.SaveChangesAsync();
+        try
+        {
+            await _context.SaveChangesAsync();
+            return true;
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException
+            { SqlState: PostgresErrorCodes.UniqueViolation, ConstraintName: "IX_Users_Email" })
+        {
+            _context.Entry(user).State = EntityState.Detached;
+            return false;
+        }
     }
 
-    public async Task UpdateAsync(User user)
-    {
-        _context.Users.Update(user);
-        await _context.SaveChangesAsync();
-    }
-
-    public async Task<bool> ExistsAsync(string email)
-    {
-        return await _context.Users.AnyAsync(u => u.Email == email);
-    }
 }

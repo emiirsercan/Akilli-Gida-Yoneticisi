@@ -1,4 +1,4 @@
-using System.Security.Claims;
+using System.Text.Json;
 using FoodApp.Application.DTOs.Recipes;
 using FoodApp.Application.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -12,10 +12,12 @@ namespace FoodApp.API.Controllers;
 public class RecipesController : ControllerBase
 {
     private readonly IRecipeService _recipeService;
+    private readonly ILogger<RecipesController> _logger;
 
-    public RecipesController(IRecipeService recipeService)
+    public RecipesController(IRecipeService recipeService, ILogger<RecipesController> logger)
     {
         _recipeService = recipeService;
+        _logger = logger;
     }
 
     [HttpPost("suggest")]
@@ -29,9 +31,11 @@ public class RecipesController : ControllerBase
             var result = await _recipeService.GetSuggestionsAsync(request.Ingredients);
             return Ok(result);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is HttpRequestException or JsonException or TaskCanceledException)
         {
-            return BadRequest(new { Error = ex.Message });
+            _logger.LogWarning(ex, "Recipe provider request failed.");
+            return StatusCode(StatusCodes.Status502BadGateway,
+                new { Error = "Tarif önerileri şu anda alınamadı. Biraz sonra tekrar dene." });
         }
     }
 }

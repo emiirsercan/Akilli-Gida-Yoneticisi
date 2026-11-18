@@ -23,9 +23,9 @@ public class AuthController : ControllerBase
             var response = await _authService.RegisterAsync(request);
             return Ok(response);
         }
-        catch (Exception ex)
+        catch (AuthException ex) when (ex.Error == AuthError.EmailInUse)
         {
-            return BadRequest(new { Error = ex.Message });
+            return Conflict(new { Error = "Bu e-posta adresi zaten kullanılıyor." });
         }
     }
 
@@ -37,23 +37,9 @@ public class AuthController : ControllerBase
             var response = await _authService.LoginAsync(request);
             return Ok(response);
         }
-        catch (Exception ex)
+        catch (AuthException ex) when (ex.Error == AuthError.InvalidCredentials)
         {
-            return Unauthorized(new { Error = ex.Message });
-        }
-    }
-
-    [HttpPost("verify-email")]
-    public async Task<IActionResult> VerifyEmail(VerifyEmailRequest request)
-    {
-        try
-        {
-            var success = await _authService.VerifyEmailAsync(request);
-            return Ok(new { Message = "Email successfully verified!" });
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(new { Error = ex.Message });
+            return Unauthorized(new { Error = "E-posta adresi veya şifre hatalı." });
         }
     }
 }

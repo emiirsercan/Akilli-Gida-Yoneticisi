@@ -14,7 +14,8 @@ namespace FoodApp.Infrastructure;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddInfrastructure(
+        this IServiceCollection services, IConfiguration configuration)
     {
         services.AddDbContext<AppDbContext>(options =>
             options.UseNpgsql(configuration.GetConnectionString("DefaultConnection")));
@@ -24,7 +25,6 @@ public static class DependencyInjection
         services.AddScoped<IJwtProvider, JwtProvider>();
         services.AddScoped<IPasswordHasher, PasswordHasher>();
         services.AddHttpClient();
-        services.AddScoped<IEmailService, FoodApp.Infrastructure.Services.ResendEmailService>();
         services.AddHttpClient<IRecipeService, FoodApp.Infrastructure.Services.GroqRecipeService>();
 
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

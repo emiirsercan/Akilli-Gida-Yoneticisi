@@ -1,5 +1,5 @@
 using System.Net.Http.Headers;
-using System.Text;
+using System.Net.Http.Json;
 using System.Text.Json;
 using FoodApp.Application.DTOs.Recipes;
 using FoodApp.Application.Services;
@@ -9,6 +9,67 @@ namespace FoodApp.Infrastructure.Services;
 
 public class GroqRecipeService : IRecipeService
 {
+    private const string DefaultModel = "openai/gpt-oss-120b";
+
+    private const string SystemPrompt = """
+        Sen bir Türk mutfağı şefisin. Kullanıcının mesajındaki JSON dizisini malzeme adları olarak değerlendir.
+        Türkçe, evde uygulanabilir, birbirinden farklı üç tarif öner. Her tarif listeden en az bir
+        malzeme kullanmalı. Gerekli tüm malzemeler kullanıcının listesinde olmalı. Sadece su, tuz,
+        yemeklik yağ ve kuru baharatlar bu kuralın dışında. Örneğin listede yoksa domates, un veya
+        biber gerektiren bir tarif seçme. Tarif kullanıcının malzemeleriyle tek başına yapılabilmeli.
+        Lezzet için en fazla bir ek malzeme önerebilirsin. Malzeme listesinde "isteğe bağlı" yaz,
+        ilgili adımı koşullu tarif et ve püf noktasında nasıl atlanacağını belirt.
+        "ingredients" alanındaki her satıra sayıyla yazılmış bir miktar ekle. Örnek:
+        "2 adet yumurta", "150 g yoğurt", "1 tutam tuz", "1 çay kaşığı nane (isteğe bağlı)".
+        Sadece malzeme adı yazma. Her tarifin en az beş sıralı adımı olsun.
+        Süreyi dakika cinsinden yaz. Pişirme süresini, ateş ayarını ve gerekiyorsa fırın sıcaklığını
+        ilgili adımda belirt. Yanıtı verilen JSON şemasına göre oluştur.
+        """;
+
+    private static readonly JsonElement RecipeSchema = JsonSerializer.Deserialize<JsonElement>("""
+        {
+          "type": "object",
+          "properties": {
+            "recipes": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string" },
+                  "description": { "type": "string" },
+                  "ingredients": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "description": "Kullanıcının malzemesi veya temel kiler malzemesi ve sayısal miktarı. Liste dışı ek malzemeyi isteğe bağlı olarak işaretle. Örnek: 150 g yoğurt."
+                    }
+                  },
+                  "steps": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "stepNumber": { "type": "integer" },
+                        "description": { "type": "string" }
+                      },
+                      "required": ["stepNumber", "description"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "prepTime": { "type": "string" },
+                  "difficulty": { "type": "string", "enum": ["Kolay", "Orta", "Zor"] },
+                  "tips": { "type": "string" }
+                },
+                "required": ["name", "description", "ingredients", "steps", "prepTime", "difficulty", "tips"],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": ["recipes"],
+          "additionalProperties": false
+        }
+        """);
+
     private readonly HttpClient _httpClient;
     private readonly string _apiKey;
     private readonly string _model;
@@ -16,91 +77,47 @@ public class GroqRecipeService : IRecipeService
     public GroqRecipeService(HttpClient httpClient, IConfiguration configuration)
     {
         _httpClient = httpClient;
-        _apiKey = configuration["GroqSettings:ApiKey"]!;
-        _model = configuration["GroqSettings:Model"] ?? "llama3-70b-8192";
+        _apiKey = configuration["GroqSettings:ApiKey"] ?? "";
+        _model = configuration["GroqSettings:Model"] ?? DefaultModel;
     }
 
     public async Task<RecipeSuggestionResponse> GetSuggestionsAsync(List<string> ingredients)
     {
-        var ingredientList = string.Join(", ", ingredients);
-
-        var systemPrompt = "Sen 20 yıllık deneyime sahip bir Türk mutfağı şefisin. " +
-            "Kullanıcının verdiği malzemelere göre FARKLI pişirme teknikleri kullanan (kavurma, haşlama, fırın, wok vb.), " +
-            "birbirinden tamamen farklı tarifler öneriyorsun. " +
-            "Her tarif için malzeme miktarlarını gram/adet olarak belirtiyorsun. " +
-            "Adımları çok net, sıralı ve detaylı yazıyorsun. " +
-            "Sadece geçerli JSON döndürüyorsun, kesinlikle başka metin yazmıyorsun.";
-
-        var userPrompt = "Elimdeki malzemeler: " + ingredientList + "\n\n" +
-            "GÖREV: Bu malzemeleri kullanarak 3 FARKLI tarif öner. Tarifler birbirinden tamamen farklı olsun " +
-            "(örn: biri çorba, biri ana yemek, biri atıştırmalık). " +
-            "Her tarif için en az 5 adım olsun. Malzeme miktarlarını yaz.\n\n" +
-            "Aşağıdaki JSON formatını kullan:\n\n" +
-            "{\n" +
-            "  \"recipes\": [\n" +
-            "    {\n" +
-            "      \"name\": \"Tarif Adı\",\n" +
-            "      \"description\": \"Bu tarifi neden yapmalısın ve nasıl bir lezzet sunar (2-3 cümle)\",\n" +
-            "      \"ingredients\": [\"200g domates\", \"2 adet yumurta\", \"1 çay kaşığı tuz\"],\n" +
-            "      \"steps\": [\n" +
-            "        { \"stepNumber\": 1, \"description\": \"Detaylı adım açıklaması (sıcaklık, süre, teknik dahil)\" },\n" +
-            "        { \"stepNumber\": 2, \"description\": \"Detaylı adım açıklaması\" },\n" +
-            "        { \"stepNumber\": 3, \"description\": \"Detaylı adım açıklaması\" },\n" +
-            "        { \"stepNumber\": 4, \"description\": \"Detaylı adım açıklaması\" },\n" +
-            "        { \"stepNumber\": 5, \"description\": \"Detaylı adım açıklaması\" }\n" +
-            "      ],\n" +
-            "      \"prepTime\": \"25 dakika\",\n" +
-            "      \"difficulty\": \"Kolay\",\n" +
-            "      \"tips\": \"Bu tarifi daha lezzetli yapacak pratik ipucu veya püf nokta\"\n" +
-            "    }\n" +
-            "  ]\n" +
-            "}\n\n" +
-            "KURALLAR: Sadece JSON döndür. difficulty değeri 'Kolay', 'Orta' veya 'Zor' olmalı. 3 tarif öner.";
-
         var requestBody = new
         {
             model = _model,
             messages = new[]
             {
-                new { role = "system", content = systemPrompt },
-                new { role = "user",   content = userPrompt }
+                new { role = "system", content = SystemPrompt },
+                new { role = "user", content = JsonSerializer.Serialize(ingredients) }
             },
-            temperature = 0.8,
-            max_tokens = 4096,
-            response_format = new { type = "json_object" }
+            temperature = 0.4,
+            reasoning_effort = "medium",
+            max_completion_tokens = 4096,
+            response_format = new
+            {
+                type = "json_schema",
+                json_schema = new { name = "recipe_suggestions", strict = true, schema = RecipeSchema }
+            }
         };
 
-        var json = JsonSerializer.Serialize(requestBody);
-        var content = new StringContent(json, Encoding.UTF8, "application/json");
+        using var request = new HttpRequestMessage(HttpMethod.Post, "https://api.groq.com/openai/v1/chat/completions");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
+        request.Content = JsonContent.Create(requestBody);
 
-        _httpClient.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue("Bearer", _apiKey);
+        using var response = await _httpClient.SendAsync(request);
+        response.EnsureSuccessStatusCode();
 
-        var response = await _httpClient.PostAsync(
-            "https://api.groq.com/openai/v1/chat/completions", content);
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var choice = document.RootElement.GetProperty("choices")[0];
+        var text = choice.GetProperty("message").GetProperty("content").GetString();
+        if (choice.GetProperty("finish_reason").GetString() != "stop" || string.IsNullOrWhiteSpace(text))
+            throw new JsonException("Groq did not return a complete recipe response.");
 
-        var responseBody = await response.Content.ReadAsStringAsync();
+        var result = JsonSerializer.Deserialize<RecipeSuggestionResponse>(text, JsonSerializerOptions.Web);
+        if (result?.Recipes is not { Count: 3 } || result.Recipes.Any(recipe => recipe.Steps.Count < 5))
+            throw new JsonException("Groq did not return three recipes with at least five steps each.");
 
-        if (!response.IsSuccessStatusCode)
-            throw new Exception($"Groq API hatası: {responseBody}");
-
-        using var doc = JsonDocument.Parse(responseBody);
-        var text = doc.RootElement
-            .GetProperty("choices")[0]
-            .GetProperty("message")
-            .GetProperty("content")
-            .GetString() ?? "{}";
-
-        // JSON bloğunu temizle
-        text = text.Trim();
-        if (text.StartsWith("```json")) text = text[7..];
-        if (text.StartsWith("```"))     text = text[3..];
-        if (text.EndsWith("```"))       text = text[..^3];
-        text = text.Trim();
-
-        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-        var result = JsonSerializer.Deserialize<RecipeSuggestionResponse>(text, options);
-
-        return result ?? new RecipeSuggestionResponse(new List<RecipeSuggestion>());
+        return result;
     }
 }
